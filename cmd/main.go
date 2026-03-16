@@ -9,28 +9,36 @@ import (
 
 func main() {
 	// Create a new wallet
+	worldState := blockchain.NewState()
 	alice := wallet.NewWallet()
 	bob := wallet.NewWallet()
+
+	// Mint some coins to Alice (Genesis)
+	worldState.Mint(alice.Address, 100)
+	fmt.Printf("Initial Alice Balance: %d\n", worldState.Balances[(alice.Address)])
 
 	// Create a transaction from Alice to Bob
 	tx := &blockchain.Transaction{
 		Sender:    []byte(alice.Address),
 		Recipient: []byte(bob.Address),
-		Amount:    10,
+		Amount:    30,
 	}
-	// Alice signs the transaction
 	tx.Sign(alice.PrivateKey)
-	fmt.Println("Transaction Signed by Alice")
 
-	// Network Verifies the Transaction
-	isValid := tx.Verify(alice.PublicKey)
-	if isValid {
-		fmt.Println("Transaction Verified Successfully")
-	} else {
-		fmt.Println("Transaction Verification Failed")
+	// Verify the transaction
+	if !tx.Verify(alice.PublicKey) {
+		fmt.Println("Transaction verification failed!")
+		return
 	}
-
-	// Create a new block with the transaction
-	block := blockchain.NewBlock(string(tx.CreateID()), []byte{})
-	fmt.Printf("New Block Created: %x\n", block.Hash)
+	// Check if Alice has enough balance
+	err := worldState.ApplyTransaction(tx)
+	if !err {
+		fmt.Println("Transaction failed!")
+		return
+	}
+	fmt.Println("Transaction successful!")
+	// Check Final Balances
+	fmt.Printf("Alice Balance: %d | Bob Balance: %d\n",
+		worldState.Balances[alice.Address],
+		worldState.Balances[bob.Address])
 }
